@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oasis Attendance Automation</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Oasis Specialist Hospital</h1>
+      <p class="subtitle">Attendance Automation Dashboard</p>
+    </header>
+
+    <main>
+      <!-- Upload Card -->
+      <div class="card">
+        <h2>1. Upload Source Files</h2>
+        <p class="description">Select or drag-and-drop the required Excel files below.</p>
+        
+        <div class="upload-group">
+          <!-- Attendance File Upload -->
+          <div class="upload-zone" id="attendance-zone">
+            <input type="file" id="attendance-file" accept=".xls,.xlsx" />
+            <div class="zone-content">
+              <span class="icon">📊</span>
+              <span class="title">Attendance File</span>
+              <span class="file-name" id="attendance-name">attendance.xls</span>
+              <span class="file-info" id="attendance-info">Click or drag file here</span>
+            </div>
+            <div class="status-indicator" id="attendance-status">Unloaded</div>
+          </div>
+
+          <!-- Shifts File Upload -->
+          <div class="upload-zone" id="shifts-zone">
+            <input type="file" id="shifts-file" accept=".xlsx" />
+            <div class="zone-content">
+              <span class="icon">⚙️</span>
+              <span class="title">Shifts File</span>
+              <span class="file-name" id="shifts-name">shifts.xlsx</span>
+              <span class="file-info" id="shifts-info">Click or drag file here</span>
+            </div>
+            <div class="status-indicator" id="shifts-status">Unloaded</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Card -->
+      <div class="card action-card">
+        <h2>2. Process Report</h2>
+        <p class="description">Generate and download the formatted Excel attendance sheet.</p>
+        
+        <button id="generate-btn" class="btn btn-primary" disabled>
+          <span class="btn-text">Generate & Download Report</span>
+          <span class="btn-spinner hidden"></span>
+        </button>
+
+        <div class="log-container hidden" id="log-container">
+          <h3>Processing Log</h3>
+          <div class="log-box" id="log-box"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>Oasis Attendance Extension v1.0.0 &bull; Running offline securely</p>
+    </footer>
+  </div>
+
+  <!-- External Library Dependencies -->
+  <script src="lib/xlsx.full.min.js"></script>
+  <script src="lib/exceljs.min.js"></script>
+  <!-- Extension Main Code -->
+  <script src="popup.js"></script>
+</body>
+</html>

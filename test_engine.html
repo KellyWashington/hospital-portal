@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="lib/xlsx.full.min.js"></script>
+  <script src="engine.js"></script>
+</head>
+<body>
+  <div id="status">Running tests...</div>
+  <script>
+    async function run() {
+      try {
+        const attRes = await fetch('/input/attendance.xls');
+        const attBuf = await attRes.arrayBuffer();
+        const attWb = XLSX.read(new Uint8Array(attBuf), { type: 'array', cellDates: true });
+        
+        const shiftRes = await fetch('/input/shifts.xlsx');
+        const shiftBuf = await shiftRes.arrayBuffer();
+        const shiftWb = XLSX.read(new Uint8Array(shiftBuf), { type: 'array', cellDates: true });
+        
+        // Parse sheets
+        function getSheetRows(sheet) {
+          if (!sheet) return [];
+          const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          if (data.length === 0) return [];
+          
+          let headerRowIndex = 0;
+          for (let i = 0; i < Math.min(data.length, 5); i++) {
+            const row = data[i];
+            if (row && row.some(cell => {
+              const s = String(cell || '').trim().toLowerCase();
+              return s === 'name' || s === 'shift_id' || s === 'department' || s === 'allowed_shifts';
+            })) {
+              headerRowIndex = i;
+              break;
+            }
+          }
+          
+          const headers = data[headerRowIndex].map(h => String(h || '').trim());
+          const rows = [];
+          for (let i = headerRowIndex + 1; i < data.length; i++) {
+            const rowData = data[i];
+            if (!rowData || rowData.length === 0) continue;
+            const rowObj = {};
+            headers.forEach((h, colIdx) => {
+              if (h) rowObj[h] = rowData[colIdx];
+            });
+            if (Object.values(rowObj).some(v => v !== undefined && v !== '')) {
+              rows.push(rowObj);
+            }
+          }
+          return rows;
+        }
+        
+        const attRows = getSheetRows(attWb.Sheets[attWb.SheetNames[0]]);
+        
+        let employeesSheet = shiftWb.SheetNames.find(n => n === 'Employees' || n === 'Shifts') || shiftWb.SheetNames[0];
+        let configsSheet = shiftWb.SheetNames.find(n => n === 'Shifts_Config');
+        let rulesSheet = shiftWb.SheetNames.find(n => n === 'Department_Rules');
+        
+        const empRows = getSheetRows(shiftWb.Sheets[employeesSheet]);
+        const configRows = configsSheet ? getSheetRows(shiftWb.Sheets[configsSheet]) : [];
+        const rulesRows = rulesSheet ? getSheetRows(shiftWb.Sheets[rulesSheet]) : [];
+        
+        const shiftsData = {
+          employees: empRows,
+          configs: configRows,
+          rules: rulesRows
+        };
+        
+        const logs = [];
+        const logFn = (msg) => logs.push(msg);
+        
+        const results = window.AttendanceEngine.calculate(attRows, shiftsData, logFn);
+        
+        const summary = {
+          totalSessions: results.sessions.length,
+          flaggedRecords: results.sessions.filter(s => s.DataQualityFlag && s.DataQualityFlag !== '').length,
+          unmatchedEmployeesCount: results.unmatchedEmployees.size,
+          duplicatesCount: results.duplicates.length
+        };
+        
+        document.getElementById('status').innerText = 'Done!';
+        
+        // Post results to python server
+        await fetch('/test-results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(summary)
+        });
+      } catch (err) {
+        document.getElementById('status').innerText = 'Error: ' + err.message;
+        await fetch('/test-results', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ error: err.message, stack: err.stack })
+        });
+      }
+    }
+    
+    run();
+  </script>
+</body>
+</html>

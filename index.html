@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oasis Specialist Hospital - Attendance Audit Operations</title>
+  <!-- Google Fonts: Inter for developer-grade clean typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    
+    <!-- Left Sidebar: Controls & Verifications -->
+    <aside class="app-sidebar">
+      
+      <!-- Brand & Status -->
+      <div class="brand-section">
+        <div class="brand-header">
+          <span class="brand-logo-dot"></span>
+          <h1>Oasis Specialist Hospital</h1>
+        </div>
+        <p class="brand-desc">HR Operations & Attendance Audit Portal</p>
+      </div>
+
+      <!-- Upload Actions Group -->
+      <div class="sidebar-section">
+        <h3 class="section-title">1. Document Upload</h3>
+        <div class="upload-zones-stack">
+          <!-- Attendance File Zone -->
+          <div class="compact-upload-zone" id="attendance-zone">
+            <input type="file" id="attendance-file" accept=".xls,.xlsx" />
+            <div class="upload-zone-inner">
+              <span class="upload-icon">📊</span>
+              <div class="upload-details">
+                <span class="upload-title" id="attendance-name">attendance.xls</span>
+                <span class="upload-subtitle" id="attendance-helper">Drop biometric logs (.xls)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Shifts File Zone -->
+          <div class="compact-upload-zone" id="shifts-zone">
+            <input type="file" id="shifts-file" accept=".xlsx" />
+            <div class="upload-zone-inner">
+              <span class="upload-icon">⚙️</span>
+              <div class="upload-details">
+                <span class="upload-title" id="shifts-name">shifts.xlsx</span>
+                <span class="upload-subtitle" id="shifts-helper">Drop employee shifts (.xlsx)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dynamic File Validation Checklist -->
+      <div class="sidebar-section">
+        <h3 class="section-title">2. Operational Validations</h3>
+        <div class="validation-checklist">
+          <!-- Attendance validations -->
+          <div class="checklist-group">
+            <span class="group-header">Attendance File</span>
+            <div class="checklist-item pending" id="chk-att-loaded">
+              <span class="check-icon"></span>
+              <span class="check-lbl">Records loaded</span>
+            </div>
+            <div class="checklist-item pending" id="chk-att-range">
+              <span class="check-icon"></span>
+              <span class="check-lbl">Date range verified</span>
+            </div>
+            <div class="checklist-item pending" id="chk-att-names">
+              <span class="check-icon"></span>
+              <span class="check-lbl">Employee names mapped</span>
+            </div>
+            <div class="checklist-item pending" id="chk-att-struct">
+              <span class="check-icon"></span>
+              <span class="check-lbl">File structure valid</span>
+            </div>
+          </div>
+          
+          <!-- Shift validations -->
+          <div class="checklist-group">
+            <span class="group-header">Shift Manifest File</span>
+            <div class="checklist-item pending" id="chk-shift-loaded">
+              <span class="check-icon"></span>
+              <span class="check-lbl">Employees directory loaded</span>
+            </div>
+            <div class="checklist-item pending" id="chk-shift-rules">
+              <span class="check-icon"></span>
+              <span class="check-lbl">Shift configs loaded</span>
+            </div>
+            <div class="checklist-item pending" id="chk-shift-struct">
+              <span class="check-icon"></span>
+              <span class="check-lbl">File structure valid</span>
+            </div>
+          </div>
+
+          <!-- System Validation -->
+          <div class="checklist-group">
+            <span class="group-header">System Status</span>
+            <div class="checklist-item pending" id="chk-sys-ready">
+              <span class="check-icon"></span>
+              <span class="check-lbl">Ready for Processing</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trust & Transparency Compliance Box -->
+      <div class="sidebar-section trust-section">
+        <h4 class="trust-title">Attendance Engine Status</h4>
+        <ul class="trust-list">
+          <li class="trust-item"><span class="trust-marker">✓</span> Production Engine Active</li>
+          <li class="trust-item"><span class="trust-marker">✓</span> Existing Logic Preserved</li>
+          <li class="trust-item"><span class="trust-marker">✓</span> Report Layout Unchanged</li>
+          <li class="trust-item"><span class="trust-marker">✓</span> Browser Processing Only</li>
+          <li class="trust-item"><span class="trust-marker">✓</span> No Data Leaves Your Device</li>
+          <li class="trust-item"><span class="trust-marker">✓</span> Single Source of Truth</li>
+        </ul>
+      </div>
+
+      <!-- Primary Action Trigger -->
+      <div class="sidebar-action-container">
+        <button id="generate-btn" class="btn btn-primary" disabled>
+          <span class="btn-text">Generate & Download Report</span>
+          <span class="btn-spinner hidden"></span>
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- Right Column: Main Operations Panel -->
+    <main class="app-main">
+      
+      <!-- Metrics Dashboard -->
+      <section class="dashboard-row">
+        <!-- Metric: Quality Indicator -->
+        <div class="metric-card" id="card-quality">
+          <span class="metric-label">Attendance Quality Score</span>
+          <div class="metric-value-container">
+            <span class="metric-number" id="val-quality">-</span>
+            <span class="metric-badge hidden" id="badge-quality">Excellent</span>
+          </div>
+          <span class="metric-subtext" id="subtext-quality">Based on exceptions rate</span>
+        </div>
+
+        <!-- Metric: Compliance -->
+        <div class="metric-card" id="card-compliance">
+          <span class="metric-label">Compliance Rate</span>
+          <div class="metric-value-container">
+            <span class="metric-number" id="val-compliance">-</span>
+          </div>
+          <span class="metric-subtext" id="subtext-compliance">Full days vs scheduled shifts</span>
+        </div>
+
+        <!-- Metric: Lateness -->
+        <div class="metric-card" id="card-lateness">
+          <span class="metric-label">Lateness Rate</span>
+          <div class="metric-value-container">
+            <span class="metric-number" id="val-lateness">-</span>
+          </div>
+          <span class="metric-subtext" id="subtext-lateness">Clock-ins exceeding grace window</span>
+        </div>
+
+        <!-- Metric: Early Departures -->
+        <div class="metric-card" id="card-early-dep">
+          <span class="metric-label">Early Departures</span>
+          <div class="metric-value-container">
+            <span class="metric-number" id="val-early-dep">-</span>
+          </div>
+          <span class="metric-subtext" id="subtext-early-dep">Clock-outs before shift release</span>
+        </div>
+
+        <!-- Metric: Incomplete Log Count -->
+        <div class="metric-card" id="card-missing">
+          <span class="metric-label">Missing Punch Events</span>
+          <div class="metric-value-container">
+            <span class="metric-number" id="val-missing">-</span>
+          </div>
+          <span class="metric-subtext" id="subtext-missing">Incomplete check-ins/outs</span>
+        </div>
+      </section>
+
+      <!-- Department Operational Insights & Date Range -->
+      <section class="insights-grid-row">
+        <div class="insights-card">
+          <div class="insights-header">
+            <h3>Department Insights</h3>
+            <span class="audit-range-lbl" id="audit-range-lbl">Select files to inspect range</span>
+          </div>
+          <div class="insights-split">
+            <div class="insight-pill">
+              <span class="insight-label">Highest Lateness</span>
+              <span class="insight-value" id="insight-high-late">-</span>
+            </div>
+            <div class="insight-pill">
+              <span class="insight-label">Highest Overtime</span>
+              <span class="insight-value" id="insight-high-ot">-</span>
+            </div>
+            <div class="insight-pill">
+              <span class="insight-label">Best Compliance</span>
+              <span class="insight-value" id="insight-best-comp">-</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Primary Workspace: Previews & Reviews -->
+      <section class="workspace-card">
+        
+        <div class="workspace-header">
+          <!-- Workspace Tabs -->
+          <div class="workspace-tabs">
+            <button class="tab-btn active" data-tab="tab-sessions">Paired Sessions Preview</button>
+            <button class="tab-btn" data-tab="tab-exceptions">Exceptions Review</button>
+            <button class="tab-btn" data-tab="tab-employees">Employee Directory</button>
+            <button class="tab-btn" data-tab="tab-rules">Shift Configs</button>
+            <button class="tab-btn" data-tab="tab-raw">Raw Punch Logs</button>
+          </div>
+
+          <!-- Table Search input -->
+          <div class="search-box-wrapper">
+            <input type="text" id="table-search" placeholder="Search rows..." disabled />
+            <span class="search-icon">🔍</span>
+          </div>
+        </div>
+
+        <div class="workspace-body">
+          
+          <!-- Tab: Paired Sessions Preview -->
+          <div class="tab-pane active" id="tab-sessions">
+            <div class="table-outer">
+              <table id="tbl-sessions">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Shift</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Late Mins</th>
+                    <th>Hours Worked</th>
+                    <th>Attendance Status</th>
+                    <th>Quality Flag</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="empty-row"><td colspan="10">No sessions parsed. Upload biometric log and shift manifest files in the sidebar.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab: Exceptions Review -->
+          <div class="tab-pane" id="tab-exceptions">
+            <!-- Exceptions Category Sub-Filter -->
+            <div class="exceptions-filters">
+              <button class="sub-filter-btn active" data-filter="all">All Exceptions</button>
+              <button class="sub-filter-btn" data-filter="missing">Missing Punches</button>
+              <button class="sub-filter-btn" data-filter="unknown">Unknown Employees</button>
+              <button class="sub-filter-btn" data-filter="rest-day">Rest Day Punch</button>
+              <button class="sub-filter-btn" data-filter="duplicates">Duplicates Removed</button>
+              <button class="sub-filter-btn" data-filter="anomalies">Anomalies</button>
+            </div>
+            
+            <div class="table-outer">
+              <table id="tbl-exceptions">
+                <thead>
+                  <tr>
+                    <th>Date/Time</th>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Type</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="empty-row"><td colspan="5">No exceptions parsed. Upload files to verify anomalies.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab: Employee Directory -->
+          <div class="tab-pane" id="tab-employees">
+            <div class="table-outer">
+              <table id="tbl-employees">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Designated Shift Code</th>
+                    <th>Rest Day</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="empty-row"><td colspan="4">No employee database parsed. Upload shifts file.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab: Shift Configs -->
+          <div class="tab-pane" id="tab-rules">
+            <div class="table-outer">
+              <table id="tbl-rules">
+                <thead>
+                  <tr>
+                    <th>Shift ID</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Night Shift</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="empty-row"><td colspan="4">No shift configs parsed. Upload shifts file.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab: Raw Punch Logs -->
+          <div class="tab-pane" id="tab-raw">
+            <div class="table-outer">
+              <table id="tbl-raw">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Timestamp</th>
+                    <th>State</th>
+                    <th>Department</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="empty-row"><td colspan="4">No biometric logs parsed. Upload attendance file.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- Terminal Log Console -->
+      <section class="console-section">
+        <div class="console-header">
+          <div class="console-dots">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
+          <span class="console-title">Processing Terminal Console</span>
+          <button class="console-clear-btn" id="clear-console">Clear Console</button>
+        </div>
+        <div class="console-body" id="console-log-box">
+          <div class="log-entry system-msg">[SYSTEM] Terminal initialized. Waiting for attendance logs upload...</div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Shared Excel parsing and compilation scripts -->
+  <script src="lib/xlsx.full.min.js"></script>
+  <script src="lib/exceljs.min.js"></script>
+
+  <!-- Client-side audit application scripts -->
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
