@@ -246,6 +246,23 @@ function parseExcelDate(val) {
 }
 
 async function processAndDownload() {
+  function toExcelLocalSerial(date) {
+    if (!(date instanceof Date)) return date;
+    return 25569 + Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+      date.getMilliseconds()
+    ) / 86400000;
+  }
+
+  function toExcelLocalDateSerial(date) {
+    if (!(date instanceof Date)) return date;
+    return 25569 + Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+  }
   log("Initializing attendance processing engine...");
 
   // Excluded employee list
@@ -1411,10 +1428,10 @@ async function processAndDownload() {
     const fill = isZebra ? fill_zebra : fill_white;
 
     ws_sess.getCell(rowNum, 1).value = s.Employee;
-    ws_sess.getCell(rowNum, 2).value = s.Date; // Date object
+    ws_sess.getCell(rowNum, 2).value = toExcelLocalDateSerial(s.Date);
     ws_sess.getCell(rowNum, 3).value = s.Shift;
-    ws_sess.getCell(rowNum, 4).value = s.CheckIn; // Date or null
-    ws_sess.getCell(rowNum, 5).value = s.CheckOut; // Date or null
+    ws_sess.getCell(rowNum, 4).value = s.CheckIn ? toExcelLocalSerial(s.CheckIn) : null;
+    ws_sess.getCell(rowNum, 5).value = s.CheckOut ? toExcelLocalSerial(s.CheckOut) : null;
     ws_sess.getCell(rowNum, 6).value = s.LateMinutes;
     ws_sess.getCell(rowNum, 7).value = s.AttendanceStatus;
     ws_sess.getCell(rowNum, 8).value = s.HoursWorked;

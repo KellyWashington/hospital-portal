@@ -1,0 +1,11 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Excel temporary lock files
+~$*
+**/~$*
+
+# Generated reports
+output/*.xlsx
+output/*.xls
