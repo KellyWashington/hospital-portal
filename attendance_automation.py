@@ -1137,7 +1137,9 @@ ws_status.cell(row=2, column=1, value=f"Reporting Period: {min_date} to {max_dat
 
 # Organization KPIs calculation
 total_employees = len(status_summary)
-avg_late_pct = round(status_summary["Late Percentage"].mean(), 1)
+total_valid_cin_days = status_summary["Valid C/In Days"].sum()
+total_late_days = status_summary["Late Days"].sum()
+avg_late_pct = round((total_late_days / total_valid_cin_days) * 100, 1) if total_valid_cin_days > 0 else 0.0
 total_shifts_logged = len(sessions_df)
 incomplete_pct = round((status_summary["Missing C/In (Unknown Lateness)"].sum() / status_summary["Days Attended"].sum()) * 100, 1)
 
@@ -1162,7 +1164,7 @@ def create_kpi_card(ws, col_start, label, val):
 
 create_kpi_card(ws_status, 1, "EMPLOYEES AUDITED", total_employees)
 create_kpi_card(ws_status, 3, "TOTAL SHIFTS LOGGED", total_shifts_logged)
-create_kpi_card(ws_status, 5, "AVG LATE PERCENTAGE", f"{avg_late_pct}%")
+create_kpi_card(ws_status, 5, "OVERALL LATE PERCENTAGE", f"{avg_late_pct}%")
 create_kpi_card(ws_status, 7, "INCOMPLETE SHIFT RATE", f"{incomplete_pct}%")
 
 # Style main table headers

@@ -35,6 +35,89 @@
     return null;
   }
 
+  function getShiftExpectedHours(shiftStr) {
+    if (!shiftStr || shiftStr === 'Rest Day') return 9;
+    const m = shiftStr.match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);
+    if (m) {
+      const sh = parseInt(m[1], 10);
+      const sm = parseInt(m[2], 10);
+      const eh = parseInt(m[3], 10);
+      const em = parseInt(m[4], 10);
+      let start = sh * 60 + sm;
+      let end = eh * 60 + em;
+      if (end <= start) end += 24 * 60;
+      return Math.max(0, (end - start) / 60);
+    }
+    return 9;
+  }
+
+  function computeSummaryMetrics(sessions, statusSummary, unmatchedEmployees, duplicates) {
+    const totalScheduled = sessions.filter(s => s.DayAttendance !== 'Rest Day').length;
+    const fullDays = sessions.filter(s => s.DayAttendance === 'Full Day').length;
+    const validCins = sessions.filter(s => s.CheckIn && s.DayAttendance !== 'Rest Day').length;
+    const lateDays = sessions.filter(s => s.LateMinutes > 0 && s.DayAttendance !== 'Rest Day').length;
+    const earlyDepDays = sessions.filter(s => s.DayAttendance === 'Early Departure').length;
+
+    let otCount = 0;
+    let totalCouts = 0;
+    sessions.forEach(s => {
+      if (s.CheckIn && s.CheckOut && s.DayAttendance !== 'Rest Day') {
+        totalCouts++;
+        const expected = getShiftExpectedHours(s.Shift);
+        if (s.HoursWorked > expected) {
+          otCount++;
+        }
+      }
+    });
+
+    const missingPunches = sessions.filter(s => s.MissingCheckin === 'Yes' || s.MissingCheckout === 'Yes').length;
+    const complianceRate = totalScheduled > 0 ? (fullDays / totalScheduled) * 100 : 0;
+    const latenessRate = validCins > 0 ? (lateDays / validCins) * 100 : 0;
+    const earlyDepRate = totalScheduled > 0 ? (earlyDepDays / totalScheduled) * 100 : 0;
+    const otRate = totalCouts > 0 ? (otCount / totalCouts) * 100 : 0;
+
+    const reviewSet = new Set([
+      ...(unmatchedEmployees || []),
+      ...sessions
+        .filter(s => (
+          s.DayAttendance === 'Anomalous' ||
+          s.MissingCheckin === 'Yes' ||
+          s.MissingCheckout === 'Yes' ||
+          s.Shift === 'Rest Day' ||
+          s.LateMinutes > 60 ||
+          (s.DataQualityFlag && s.DataQualityFlag !== '')
+        ))
+        .map(s => s.Employee)
+    ]);
+
+    const totalEmployees = statusSummary.length;
+    const totalDaysAttended = statusSummary.reduce((sum, s) => sum + (s['Days Attended'] || 0), 0);
+    const totalMissingCin = statusSummary.reduce((sum, s) => sum + (s['Missing C/In (Unknown Lateness)'] || 0), 0);
+    const totalValidCinDays = statusSummary.reduce((sum, s) => sum + (s['Valid C/In Days'] || 0), 0);
+    const totalLateDays = statusSummary.reduce((sum, s) => sum + (s['Late Days'] || 0), 0);
+
+    return {
+      totalEmployees,
+      totalScheduled,
+      fullDays,
+      validCins,
+      lateDays,
+      earlyDepDays,
+      missingPunches,
+      otCount,
+      totalCouts,
+      complianceRate,
+      latenessRate,
+      earlyDepRate,
+      otRate,
+      reviewCount: reviewSet.size,
+      totalDaysAttended,
+      totalMissingCin,
+      totalValidCinDays,
+      totalLateDays
+    };
+  }
+
   function calculate(attendanceData, shiftsData, log) {
     log("Initializing attendance processing engine...");
 
@@ -933,17 +1016,20 @@
       };
     });
 
+    const summaryMetrics = computeSummaryMetrics(sessions, statusSummary, unmatchedEmployees, duplicates);
+
     return {
       sessions,
       employeeSummary,
       statusSummary,
       unmatchedEmployees,
-      duplicates
+      duplicates,
+      summaryMetrics
     };
   }
 
   async function downloadExcel(results, log) {
-    const { sessions, employeeSummary, statusSummary } = results;
+    const { sessions, employeeSummary, statusSummary, summaryMetrics = {} } = results;
 
     function toExcelLocalSerial(date) {
       if (!(date instanceof Date)) return date;
@@ -1022,20 +1108,20 @@
     ws_status.getCell('A2').font = f_meta;
     
     // KPI card calculation
-    const totalEmployees = statusSummary.length;
+    const totalEmployees = summaryMetrics.totalEmployees ?? statusSummary.length;
     const totalShiftsLogged = sessions.length;
-    const avgLatePct = totalEmployees > 0 
-      ? Math.round((statusSummary.reduce((sum, s) => sum + s["Late Percentage"], 0) / totalEmployees) * 10) / 10 
+    const avgLatePct = summaryMetrics.latenessRate !== undefined
+      ? Math.round(summaryMetrics.latenessRate * 10) / 10
       : 0;
     
-    const totalDaysAttended = statusSummary.reduce((sum, s) => sum + s["Days Attended"], 0);
-    const totalMissingCin = statusSummary.reduce((sum, s) => sum + s["Missing C/In (Unknown Lateness)"], 0);
+    const totalDaysAttended = summaryMetrics.totalDaysAttended ?? statusSummary.reduce((sum, s) => sum + s["Days Attended"], 0);
+    const totalMissingCin = summaryMetrics.totalMissingCin ?? statusSummary.reduce((sum, s) => sum + s["Missing C/In (Unknown Lateness)"], 0);
     const incompletePct = totalDaysAttended > 0 ? Math.round((totalMissingCin / totalDaysAttended) * 100 * 10) / 10 : 0;
 
     // Render KPIs
     renderKPICard(ws_status, 1, 'EMPLOYEES AUDITED', totalEmployees);
     renderKPICard(ws_status, 3, 'TOTAL SHIFTS LOGGED', totalShiftsLogged);
-    renderKPICard(ws_status, 5, 'AVG LATE PERCENTAGE', `${avgLatePct}%`);
+    renderKPICard(ws_status, 5, 'OVERALL LATE PERCENTAGE', `${avgLatePct}%`);
     renderKPICard(ws_status, 7, 'INCOMPLETE SHIFT RATE', `${incompletePct}%`);
 
     function renderKPICard(ws, colStart, label, val) {

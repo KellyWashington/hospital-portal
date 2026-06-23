@@ -487,10 +487,10 @@
     const complianceRate = totalScheduled > 0 ? (fullDays / totalScheduled) * 100 : 0;
     valCompliance.innerText = `${complianceRate.toFixed(1)}%`;
 
-    // 2. Lateness Rate (Late days / sessions with checkin)
+    // 2. Lateness Rate (shared with report export)
     const validCins = sessions.filter(s => s.CheckIn && s.DayAttendance !== 'Rest Day').length;
     const lateDays = sessions.filter(s => s.LateMinutes > 0 && s.DayAttendance !== 'Rest Day').length;
-    const latenessRate = validCins > 0 ? (lateDays / validCins) * 100 : 0;
+    const latenessRate = results.summaryMetrics?.latenessRate ?? (validCins > 0 ? (lateDays / validCins) * 100 : 0);
     valLateness.innerText = `${latenessRate.toFixed(1)}%`;
 
     // 3. Early Departure Rate
